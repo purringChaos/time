@@ -39,10 +39,8 @@ pub const Location = struct {
     const max_file_size: usize = 10 << 20;
     const initLocation = switch (builtin.os.tag) {
         .linux => initLinux,
-        .macosx, .ios => initDarwin,
         else => @compileError("Unsupported OS"),
     };
-    pub var utc_local = Location.init(std.heap.page_allocator, "UTC");
     var unix_sources = [_][]const u8{
         "/usr/share/zoneinfo/",
         "/usr/share/lib/zoneinfo/",
@@ -141,8 +139,8 @@ pub const Location = struct {
     }
 
     /// getLocal returns local timezone.
-    pub fn getLocal() Location {
-        return initLocation();
+    pub fn getLocal(m: *mem.Allocator) Location {
+        return initLocation(m);
     }
 
     /// firstZoneUsed returns whether the first zone is used by some
@@ -467,36 +465,32 @@ pub const Location = struct {
         return loadLocationFromTZData(a, name, t);
     }
 
-    pub fn load(name: []const u8) !Location {
-        return loadLocationFromTZFile(std.heap.page_allocator, name, unix_sources[0..]);
+    pub fn load(a: *mem.Allocator, name: []const u8) !Location {
+        return loadLocationFromTZFile(a, name, unix_sources[0..]);
     }
 
-    fn initDarwin() Location {
-        return initLinux();
-    }
-
-    fn initLinux() Location {
+    fn initLinux(a: *mem.Allocator) Location {
         var tz: ?[]const u8 = null;
-        if (std.process.getEnvMap(std.heap.page_allocator)) |value| {
+        if (std.process.getEnvMap(a)) |value| {
             var env = value;
             defer env.deinit();
             tz = env.get("TZ");
         } else |err| {}
         if (tz) |name| {
             if (name.len != 0 and !mem.eql(u8, name, "UTC")) {
-                if (loadLocationFromTZFile(std.heap.page_allocator, name, unix_sources[0..])) |tzone| {
+                if (loadLocationFromTZFile(a, name, unix_sources[0..])) |tzone| {
                     return tzone;
                 } else |err| {}
             }
         } else {
             var etc = [_][]const u8{"/etc/"};
-            if (loadLocationFromTZFile(std.heap.page_allocator, "localtime", etc[0..])) |tzone| {
+            if (loadLocationFromTZFile(a, "localtime", etc[0..])) |tzone| {
                 var zz = tzone;
                 zz.name = "local";
                 return zz;
             } else |err| {}
         }
-        return utc_local;
+        unreachable;
     }
 
     fn byteString(x: []u8) []u8 {
@@ -824,15 +818,6 @@ pub const Time = struct {
         return ZoneDetail{
             .name = zn.name,
             .offset = zn.offset,
-        };
-    }
-
-    /// utc returns time with the location set to UTC.
-    fn utc(self: Time) Time {
-        return Time{
-            .wall = self.wall,
-            .ext = self.ext,
-            .loc = &Location.utc_local,
         };
     }
 
