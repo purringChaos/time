@@ -852,7 +852,7 @@ pub const Time = struct {
         self: Time,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
-        out_stream: var,
+        out_stream: anytype,
     ) !void {
         var out: [DefaultFormat.len * 2]u8 = undefined;
         var fixed_buf_alloc = std.heap.FixedBufferAllocator.init(out[0..]);
@@ -906,7 +906,7 @@ pub const Time = struct {
         _ = try stream.outStream().write(v);
     }
 
-    fn formatNano(stream: var, nanosec: usize, n: usize, trim: bool) !void {
+    fn formatNano(stream: anytype, nanosec: usize, n: usize, trim: bool) !void {
         var u = nanosec;
         var buf = [_]u8{0} ** 9;
         var start = buf.len;
@@ -931,7 +931,7 @@ pub const Time = struct {
 
     /// appendFormat is like Format but appends the textual
     /// representation to b
-    pub fn appendFormat(self: Time, stream: var, layout: []const u8) !void {
+    pub fn appendFormat(self: Time, stream: anytype, layout: []const u8) !void {
         const abs_value = self.abs();
         const tz = self.zone();
         const clock_value = self.clock();
@@ -1745,7 +1745,7 @@ pub const Duration = struct {
         self: Duration,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
-        out_stream: var,
+        out_stream: anytype,
     ) !void {
         try out_stream(context, self.string());
     }
@@ -2023,7 +2023,7 @@ pub const Month = enum(usize) {
         self: Month,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
-        out_stream: var,
+        out_stream: anytype,
     ) !void {
         try out_stream.writeAll(self.string());
     }
@@ -2165,7 +2165,7 @@ pub const Weekday = enum(usize) {
         self: Weekday,
         comptime fmt: []const u8,
         options: std.fmt.FormatOptions,
-        out_stream: var,
+        out_stream: anytype,
     ) !void {
         try out_stream(context, self.string());
     }
